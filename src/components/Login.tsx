@@ -12,10 +12,7 @@ export default function Login() {
     setErro('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
 
     if (error) {
       setErro(error.message)
@@ -33,9 +30,7 @@ export default function Login() {
 
         <form onSubmit={entrar} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              E-mail
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
             <input
               type="email"
               value={email}
@@ -47,9 +42,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
             <input
               type="password"
               value={senha}
@@ -61,9 +54,7 @@ export default function Login() {
           </div>
 
           {erro && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">
-              {erro}
-            </div>
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">{erro}</div>
           )}
 
           <button

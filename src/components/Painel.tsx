@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Tela } from '../App'
+import { STATUS_LABELS } from '../types'
 
 interface Props {
   session: Session
@@ -10,7 +11,8 @@ interface Props {
 
 export default function Painel({ session, onNavigate }: Props) {
   const [contadorGestor, setContadorGestor] = useState(0)
-  const [perfil, setPerfil] = useState<string>('')
+  const [contadorDiagnostico, setContadorDiagnostico] = useState(0)
+  const [perfil, setPerfil] = useState('')
 
   useEffect(() => {
     carregarDados()
@@ -23,18 +25,21 @@ export default function Painel({ session, onNavigate }: Props) {
       .eq('id', session.user.id)
       .single()
 
-    if (userData?.perfil) {
-      setPerfil(userData.perfil)
-    }
+    if (userData?.perfil) setPerfil(userData.perfil)
 
-    const { count } = await supabase
+    const { count: countGestor } = await supabase
       .from('atendimentos')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'AGUARDANDO_VALIDACAO_GESTOR')
 
-    if (count !== null) {
-      setContadorGestor(count)
-    }
+    if (countGestor !== null) setContadorGestor(countGestor)
+
+    const { count: countDiag } = await supabase
+      .from('atendimentos')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'EM_DIAGNOSTICO')
+
+    if (countDiag !== null) setContadorDiagnostico(countDiag)
   }
 
   function sair() {
@@ -77,6 +82,14 @@ export default function Painel({ session, onNavigate }: Props) {
             </button>
           ))}
         </div>
+
+        {contadorDiagnostico > 0 && (
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-blue-800 text-sm">
+              <strong>{contadorDiagnostico}</strong> atendimento(s) em diagnóstico técnico
+            </p>
+          </div>
+        )}
       </main>
     </div>
   )

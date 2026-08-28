@@ -1,43 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import type { TipoAtendimento, SubtipoRevisao } from '../types'
 
 interface Props {
   onBack: () => void
-  onComplete: () => void
+  onComplete: (id: string) => void
 }
 
-interface Cliente {
-  id: string
-  razao_social: string
-}
-
-interface Veiculo {
-  id: string
-  placa_traseira: string
-  cliente_id: string
-}
-
-interface Equipamento {
-  id: string
-  modelo: string
-  numero_serie: string
-  veiculo_id: string
-}
-
-interface ModeloEquip {
-  id: string
-  nome: string
-  categoria: string
-}
-
-const TIPOS_SERVICO = ['CORRETIVA', 'PREVENTIVA', 'GARANTIA', 'REVISAO', 'INSTALACAO', 'OUTRO']
+interface Cliente { id: string; razao_social: string }
+interface Modelo { id: string; nome: string; categoria: string }
 
 export default function NovoAtendimento({ onBack, onComplete }: Props) {
   const [etapa, setEtapa] = useState(1)
   const [clientes, setClientes] = useState<Cliente[]>([])
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
-  const [modelos, setModelos] = useState<ModeloEquip[]>([])
+  const [modelos, setModelos] = useState<Modelo[]>([])
 
   const [clienteId, setClienteId] = useState('')
   const [novoCliente, setNovoCliente] = useState('')
@@ -48,16 +24,15 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
   const [modeloId, setModeloId] = useState('')
   const [numeroSerie, setNumeroSerie] = useState('')
   const [semSerie, setSemSerie] = useState(false)
-  const [tipoServico, setTipoServico] = useState('')
+  const [tipoAtendimento, setTipoAtendimento] = useState<TipoAtendimento | ''>('')
+  const [subtipoRevisao, setSubtipoRevisao] = useState<SubtipoRevisao>('')
   const [horaChave, setHoraChave] = useState('')
   const [horaMotor, setHoraMotor] = useState('')
   const [horaEletrica, setHoraEletrica] = useState('')
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
-  useEffect(() => {
-    carregarDados()
-  }, [])
+  useEffect(() => { carregarDados() }, [])
 
   async function carregarDados() {
     const { data: c } = await supabase.from('clientes').select('id, razao_social').order('razao_social')
@@ -69,11 +44,6 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
       .eq('ativo', true)
       .order('nome')
     if (m) setModelos(m)
-  }
-
-  function normalizarTelefone(t: string) {
-    const digits = t.replace(/\D/g, '')
-    return digits.length >= 10 && digits.length <= 11
   }
 
   function normalizarPlaca(p: string) {
@@ -88,12 +58,9 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
     return antigo || mercosul
   }
 
-  async function buscarVeiculosPorCliente(cid: string) {
-    const { data } = await supabase
-      .from('veiculos')
-      .select('id, placa_traseira, cliente_id')
-      .eq('cliente_id', cid)
-    if (data) setVeiculos(data)
+  function validarTelefone(t: string) {
+    const digits = t.replace(/\D/g, '')
+    return digits.length >= 10 && digits.length <= 11
   }
 
   async function salvar() {
@@ -122,22 +89,16 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
       const placaNormalizada = normalizarPlaca(placa)
       const { data: veic, error: errV } = await supabase
         .from('veiculos')
-        .insert({
-          placa_traseira: placaNormalizada,
-          cliente_id: cidFinal,
-        })
+        .insert({ placa_traseira: placaNormalizada, cliente_id: cidFinal })
         .select('id')
         .single()
       if (errV) throw errV
 
+      const modeloNome = modelos.find(m => m.id === modeloId)?.nome || ''
       const serieFinal = semSerie ? 'N/A' : numeroSerie
       const { data: equip, error: errE } = await supabase
         .from('equipamentos')
-        .insert({
-          modelo: modelos.find(m => m.id === modeloId)?.nome || '',
-          numero_serie: serieFinal,
-          veiculo_id: veic.id,
-        })
+        .insert({ modelo: modeloNome, numero_serie: serieFinal, veiculo_id: veic.id })
         .select('id')
         .single()
       if (errE) throw errE
@@ -151,17 +112,18 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
           responsavel_nome: responsavel,
           responsavel_telefone: telefone.replace(/\D/g, ''),
           relato_entrada: relato,
-          tipo_servico: tipoServico,
+          tipo_atendimento: tipoAtendimento,
+          subtipo_revisao: tipoAtendimento === 'REVISAO' ? subtipoRevisao : null,
           hora_chave: horaChave ? parseFloat(horaChave) : null,
           hora_motor: horaMotor ? parseFloat(horaMotor) : null,
           hora_eletrica: horaEletrica ? parseFloat(horaEletrica) : null,
           status: 'AGUARDANDO_GARANTIA',
         })
-        .select('numero')
+        .select('id, numero')
         .single()
       if (errA) throw errA
 
-      onComplete()
+      onComplete(atend.id)
     } catch (e: any) {
       setErro(e.message || 'Erro ao salvar atendimento')
     }
@@ -177,14 +139,16 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
     }
     if (etapa === 2) {
       if (!responsavel) { setErro('Informe o responsável'); return }
-      if (!normalizarTelefone(telefone)) { setErro('Telefone inválido. Use DDD + número (10 ou 11 dígitos)'); return }
+      if (!validarTelefone(telefone)) { setErro('Telefone inválido. Use DDD + número (10 ou 11 dígitos)'); return }
     }
     if (etapa === 3 && !relato) { setErro('Descreva o relato de entrada'); return }
-    if (etapa === 4) {
-      if (!validarPlaca(placa)) { setErro('Placa inválida. Use 7 caracteres (ABC1234 ou ABC1D23)'); return }
-    }
+    if (etapa === 4 && !validarPlaca(placa)) { setErro('Placa inválida. Use 7 caracteres (ABC1234 ou ABC1D23)'); return }
     if (etapa === 5 && !modeloId) { setErro('Selecione o modelo'); return }
-    if (etapa === 6 && !tipoServico) { setErro('Selecione o tipo de serviço'); return }
+    if (etapa === 6 && !tipoAtendimento) { setErro('Selecione o tipo de atendimento'); return }
+    if (etapa === 6 && tipoAtendimento === 'REVISAO' && !subtipoRevisao) {
+      setErro('Selecione o subtipo da revisão')
+      return
+    }
 
     if (etapa < 8) setEtapa(etapa + 1)
     else salvar()
@@ -201,7 +165,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
     'Relato do Atendimento',
     'Veículo',
     'Equipamento',
-    'Tipo de Serviço',
+    'Tipo de Atendimento',
     'Horímetros',
     'Revisão e Confirmação',
   ]
@@ -209,9 +173,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-900 text-white px-4 py-4 flex items-center gap-4">
-        <button onClick={voltar} className="text-blue-200 hover:text-white">
-          ← Voltar
-        </button>
+        <button onClick={voltar} className="text-blue-200 hover:text-white">← Voltar</button>
         <h1 className="text-lg font-bold">Novo Atendimento</h1>
       </header>
 
@@ -225,7 +187,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
           ))}
         </div>
 
-        <p className="text-sm text-gray-500 mb-4">Etapa {etapa} de 8</p>
+        <p className="text-sm text-gray-500 mb-2">Etapa {etapa} de 8</p>
         <h2 className="text-xl font-bold text-gray-800 mb-6">{titulos[etapa - 1]}</h2>
 
         <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
@@ -235,11 +197,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente existente</label>
                 <select
                   value={clienteId}
-                  onChange={(e) => {
-                    setClienteId(e.target.value)
-                    setNovoCliente('')
-                    if (e.target.value) buscarVeiculosPorCliente(e.target.value)
-                  }}
+                  onChange={(e) => { setClienteId(e.target.value); setNovoCliente('') }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                 >
                   <option value="">Selecione...</option>
@@ -341,11 +299,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
                   placeholder="Nº de série do equipamento"
                 />
                 <label className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={semSerie}
-                    onChange={(e) => setSemSerie(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={semSerie} onChange={(e) => setSemSerie(e.target.checked)} />
                   Não possui / N/A
                 </label>
               </div>
@@ -354,22 +308,69 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
 
           {etapa === 6 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de serviço</label>
-              <div className="grid grid-cols-2 gap-3">
-                {TIPOS_SERVICO.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTipoServico(t)}
-                    className={`px-4 py-3 rounded-lg border-2 font-medium transition-colors ${
-                      tipoServico === t
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+              <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de atendimento</label>
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => setTipoAtendimento('REVISAO')}
+                  className={`px-4 py-4 rounded-lg border-2 font-medium text-left transition-colors ${
+                    tipoAtendimento === 'REVISAO'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <p className="font-bold">REVISÃO</p>
+                  <p className="text-xs mt-1">Preventiva ou Corretiva com checklist padrão</p>
+                </button>
+                <button
+                  onClick={() => { setTipoAtendimento('SERVICO_COMUM'); setSubtipoRevisao('') }}
+                  className={`px-4 py-4 rounded-lg border-2 font-medium text-left transition-colors ${
+                    tipoAtendimento === 'SERVICO_COMUM'
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <p className="font-bold">SERVIÇO COMUM</p>
+                  <p className="text-xs mt-1">Abre sem escopo definido. Diagnóstico define o serviço.</p>
+                </button>
               </div>
+
+              {tipoAtendimento === 'REVISAO' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Subtipo da revisão</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setSubtipoRevisao('PREVENTIVA')}
+                      className={`px-4 py-3 rounded-lg border-2 font-medium transition-colors ${
+                        subtipoRevisao === 'PREVENTIVA'
+                          ? 'border-green-600 bg-green-50 text-green-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      PREVENTIVA
+                    </button>
+                    <button
+                      onClick={() => setSubtipoRevisao('CORRETIVA')}
+                      className={`px-4 py-3 rounded-lg border-2 font-medium transition-colors ${
+                        subtipoRevisao === 'CORRETIVA'
+                          ? 'border-orange-600 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      CORRETIVA
+                    </button>
+                  </div>
+                  {subtipoRevisao === 'PREVENTIVA' && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Usa somente o checklist padrão. Peças e serviços gerados após as respostas do técnico.
+                    </p>
+                  )}
+                  {subtipoRevisao === 'CORRETIVA' && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Usa o checklist padrão + pesquisa livre de peças e serviços + ocorrências esporádicas.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -377,33 +378,18 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hora-chave</label>
-                <input
-                  type="number"
-                  value={horaChave}
-                  onChange={(e) => setHoraChave(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  placeholder="0"
-                />
+                <input type="number" value={horaChave} onChange={(e) => setHoraChave(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="0" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hora-motor</label>
-                <input
-                  type="number"
-                  value={horaMotor}
-                  onChange={(e) => setHoraMotor(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  placeholder="0"
-                />
+                <input type="number" value={horaMotor} onChange={(e) => setHoraMotor(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="0" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hora-elétrica</label>
-                <input
-                  type="number"
-                  value={horaEletrica}
-                  onChange={(e) => setHoraEletrica(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  placeholder="0"
-                />
+                <input type="number" value={horaEletrica} onChange={(e) => setHoraEletrica(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="0" />
               </div>
             </>
           )}
@@ -418,7 +404,7 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
                 <p><strong>Placa:</strong> {normalizarPlaca(placa)}</p>
                 <p><strong>Modelo:</strong> {modelos.find(m => m.id === modeloId)?.nome}</p>
                 <p><strong>Série:</strong> {semSerie ? 'N/A' : numeroSerie}</p>
-                <p><strong>Serviço:</strong> {tipoServico}</p>
+                <p><strong>Tipo:</strong> {tipoAtendimento === 'REVISAO' ? `Revisão ${subtipoRevisao}` : 'Serviço Comum'}</p>
                 <p><strong>Hora-chave:</strong> {horaChave || '—'}</p>
                 <p><strong>Hora-motor:</strong> {horaMotor || '—'}</p>
                 <p><strong>Hora-elétrica:</strong> {horaEletrica || '—'}</p>
@@ -426,23 +412,15 @@ export default function NovoAtendimento({ onBack, onComplete }: Props) {
             </div>
           )}
 
-          {erro && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">{erro}</div>
-          )}
+          {erro && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">{erro}</div>}
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button
-            onClick={voltar}
-            className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
-          >
+          <button onClick={voltar} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600 hover:bg-gray-50">
             Voltar
           </button>
-          <button
-            onClick={proximo}
-            disabled={salvando}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
+          <button onClick={proximo} disabled={salvando}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
             {salvando ? 'Salvando...' : etapa === 8 ? 'Confirmar' : 'Próximo'}
           </button>
         </div>

@@ -4,11 +4,13 @@ import type { Session } from '@supabase/supabase-js'
 import Login from './components/Login'
 import Painel from './components/Painel'
 import NovoAtendimento from './components/NovoAtendimento'
-import ListaAtendimentos from './components/ListaAtendimentos'
+import Garantia from './components/Garantia'
 import Checklist from './components/Checklist'
+import ListaAtendimentos from './components/ListaAtendimentos'
 import CentralGestor from './components/CentralGestor'
+import OrdemServico from './components/OrdemServico'
 
-export type Tela = 'painel' | 'novo' | 'lista' | 'checklist' | 'gestor'
+export type Tela = 'painel' | 'novo' | 'garantia' | 'checklist' | 'lista' | 'gestor' | 'os'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -44,36 +46,59 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {tela === 'painel' && (
-        <Painel
-          session={session}
-          onNavigate={(t: Tela) => setTela(t)}
-        />
+        <Painel session={session} onNavigate={(t: Tela) => setTela(t)} />
       )}
       {tela === 'novo' && (
         <NovoAtendimento
           onBack={() => setTela('painel')}
-          onComplete={() => setTela('lista')}
+          onComplete={(id: string) => {
+            setAtendimentoSelecionado(id)
+            setTela('garantia')
+          }}
         />
       )}
-      {tela === 'lista' && (
-        <ListaAtendimentos
+      {tela === 'garantia' && atendimentoSelecionado && (
+        <Garantia
+          atendimentoId={atendimentoSelecionado}
           onBack={() => setTela('painel')}
-          onOpenAtendimento={(id: string) => {
-            setAtendimentoSelecionado(id)
-            setTela('checklist')
-          }}
+          onLiberar={() => setTela('checklist')}
         />
       )}
       {tela === 'checklist' && atendimentoSelecionado && (
         <Checklist
           atendimentoId={atendimentoSelecionado}
           onBack={() => setTela('lista')}
+          onComplete={() => setTela('lista')}
         />
       )}
-      {tela === 'gestor' && (
+      {tela === 'lista' && (
+        <ListaAtendimentos
+          onBack={() => setTela('painel')}
+          onOpenAtendimento={(id: string, status: string) => {
+            setAtendimentoSelecionado(id)
+            if (status === 'AGUARDANDO_GARANTIA') {
+              setTela('garantia')
+            } else if (status === 'EM_DIAGNOSTICO' || status === 'DEVOLVIDO_AO_TECNICO') {
+              setTela('checklist')
+            } else if (status === 'AGUARDANDO_VALIDACAO_GESTOR') {
+              setTela('gestor')
+            } else {
+              setTela('os')
+            }
+          }}
+        />
+      )}
+      {tela === 'gestor' && atendimentoSelecionado && (
         <CentralGestor
           session={session}
-          onBack={() => setTela('painel')}
+          atendimentoId={atendimentoSelecionado}
+          onBack={() => setTela('lista')}
+        />
+      )}
+      {tela === 'os' && atendimentoSelecionado && (
+        <OrdemServico
+          atendimentoId={atendimentoSelecionado}
+          onBack={() => setTela('lista')}
         />
       )}
     </div>

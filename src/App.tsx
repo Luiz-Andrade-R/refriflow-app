@@ -78,7 +78,7 @@ export default function App() {
             setAtendimentoSelecionado(id)
             if (status === 'AGUARDANDO_GARANTIA') {
               setTela('garantia')
-            } else if (status === 'EM_ANALISE_TECNICA') {
+            } else if (status === 'EM_DIAGNOSTICO' || status === 'DEVOLVIDO_AO_TECNICO') {
               setTela('checklist')
             } else if (status === 'AGUARDANDO_VALIDACAO_GESTOR') {
               setTela('gestor')

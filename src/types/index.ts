@@ -1,1 +1,82 @@
-export type TipoAtendimento = "REVISAO" | "SERVICO_COMUM" export type SubtipoRevisao = "PREVENTIVA" | "CORRETIVA" | "" export type AcaoChecklist = "OK" | "TROCAR" | "REPARAR" | "LIMPAR" | "LAVAR" | "AJUSTAR" | "COMPLETAR" | "MONITORAR" | "N/A"  // CORRIGIDO: EM_ANALISE_TECNICA em vez de EM_DIAGNOSTICO; removido DEVOLVIDO_AO_TECNICO export type StatusAtendimento =   | "ABERTO"   | "AGUARDANDO_GARANTIA"   | "EM_ANALISE_TECNICA"   | "AGUARDANDO_VALIDACAO_GESTOR"   | "AGUARDANDO_ORCAMENTO"   | "ORCAMENTO_GERADO"   | "AGUARDANDO_APROVACAO_CLIENTE"   | "APROVADO"   | "EM_EXECUCAO"   | "FINALIZADO"  export type PerfilUsuario = "ADMIN" | "TECNICO" | "GESTOR_OFICINA" | "RECEPCAO" | "COMERCIAL"  export interface PecaAtendimento {   id: string<br/>   atendimento_id: string<br/>   codigo_peca: string<br/>   descricao: string<br/>   quantidade: number<br/>   unidade: string<br/>   observacao?: string<br/>   manual: boolean<br/>   checklist_resposta_id?: string }  export interface ServicoAtendimento {   id: string<br/>   atendimento_id: string<br/>   codigo_servico: string<br/>   descricao: string<br/>   horas_padrao: number | null<br/>   quantidade: number<br/>   unidade: string<br/>   procedimento?: string<br/>   observacao?: string<br/>   manual: boolean<br/>   checklist_resposta_id?: string }  export interface ChecklistResposta {   condicao: string<br/>   diagnostico: string<br/>   acao: AcaoChecklist | ""<br/>   observacao: string<br/>   quantidade: string<br/>   localizacao: string }  export const ACOES_GERAM_PECA: AcaoChecklist[] = ["TROCAR"]<br/> export const ACOES_GERAM_SERVICO: AcaoChecklist[] = ["TROCAR", "REPARAR", "LIMPAR", "LAVAR", "AJUSTAR"]<br/> export const ACOES_GERAM_MATERIAL: AcaoChecklist[] = ["COMPLETAR"]  // CORRIGIDO: labels e cores atualizadas<br/> export const STATUS_LABELS: Record<string, string> = {<br/>   ABERTO: "Aberto",<br/>   AGUARDANDO_GARANTIA: "Aguardando Garantia",<br/>   EM_ANALISE_TECNICA: "Em Análise Técnica",<br/>   AGUARDANDO_VALIDACAO_GESTOR: "Aguardando Validação",<br/>   AGUARDANDO_ORCAMENTO: "Aguardando Orçamento",<br/>   ORCAMENTO_GERADO: "Orçamento Gerado",<br/>   AGUARDANDO_APROVACAO_CLIENTE: "Aguardando Aprovação do Cliente",<br/>   APROVADO: "Aprovado",<br/>   EM_EXECUCAO: "Em Execução",<br/>   FINALIZADO: "Finalizado", }  export const STATUS_CORES: Record<string, string> = {<br/>   ABERTO: "bg-gray-100 text-gray-800",<br/>   AGUARDANDO_GARANTIA: "bg-yellow-100 text-yellow-800",<br/>   EM_ANALISE_TECNICA: "bg-blue-100 text-blue-800",<br/>   AGUARDANDO_VALIDACAO_GESTOR: "bg-orange-100 text-orange-800",<br/>   AGUARDANDO_ORCAMENTO: "bg-purple-100 text-purple-800",<br/>   ORCAMENTO_GERADO: "bg-indigo-100 text-indigo-800",<br/>   AGUARDANDO_APROVACAO_CLIENTE: "bg-cyan-100 text-cyan-800",<br/>   APROVADO: "bg-green-100 text-green-800",<br/>   EM_EXECUCAO: "bg-teal-100 text-teal-800",<br/>   FINALIZADO: "bg-gray-200 text-gray-600", }
+export type TipoAtendimento = "REVISAO" | "SERVICO_COMUM"
+export type SubtipoRevisao = "PREVENTIVA" | "CORRETIVA" | ""
+export type AcaoChecklist = "OK" | "TROCAR" | "REPARAR" | "LIMPAR" | "LAVAR" | "AJUSTAR" | "COMPLETAR" | "MONITORAR" | "N/A"
+
+export type StatusAtendimento =
+  | "ABERTO"
+  | "AGUARDANDO_GARANTIA"
+  | "EM_ANALISE_TECNICA"
+  | "AGUARDANDO_VALIDACAO_GESTOR"
+  | "AGUARDANDO_ORCAMENTO"
+  | "ORCAMENTO_GERADO"
+  | "AGUARDANDO_APROVACAO_CLIENTE"
+  | "APROVADO"
+  | "EM_EXECUCAO"
+  | "FINALIZADO"
+
+export type PerfilUsuario = "ADMIN" | "TECNICO" | "GESTOR_OFICINA" | "RECEPCAO" | "COMERCIAL"
+
+export interface PecaAtendimento {
+  id: string
+  atendimento_id: string
+  codigo_peca: string
+  descricao: string
+  quantidade: number
+  unidade: string
+  observacao?: string
+  manual: boolean
+  checklist_resposta_id?: string
+}
+
+export interface ServicoAtendimento {
+  id: string
+  atendimento_id: string
+  codigo_servico: string
+  descricao: string
+  horas_padrao: number | null
+  quantidade: number
+  unidade: string
+  procedimento?: string
+  observacao?: string
+  manual: boolean
+  checklist_resposta_id?: string
+}
+
+export interface ChecklistResposta {
+  condicao: string
+  diagnostico: string
+  acao: AcaoChecklist | ""
+  observacao: string
+  quantidade: string
+  localizacao: string
+}
+
+export const ACOES_GERAM_PECA: AcaoChecklist[] = ["TROCAR"]
+export const ACOES_GERAM_SERVICO: AcaoChecklist[] = ["TROCAR", "REPARAR", "LIMPAR", "LAVAR", "AJUSTAR"]
+export const ACOES_GERAM_MATERIAL: AcaoChecklist[] = ["COMPLETAR"]
+
+export const STATUS_LABELS: Record<string, string> = {
+  ABERTO: "Aberto",
+  AGUARDANDO_GARANTIA: "Aguardando Garantia",
+  EM_ANALISE_TECNICA: "Em Análise Técnica",
+  AGUARDANDO_VALIDACAO_GESTOR: "Aguardando Validação",
+  AGUARDANDO_ORCAMENTO: "Aguardando Orçamento",
+  ORCAMENTO_GERADO: "Orçamento Gerado",
+  AGUARDANDO_APROVACAO_CLIENTE: "Aguardando Aprovação do Cliente",
+  APROVADO: "Aprovado",
+  EM_EXECUCAO: "Em Execução",
+  FINALIZADO: "Finalizado",
+}
+
+export const STATUS_CORES: Record<string, string> = {
+  ABERTO: "bg-gray-100 text-gray-800",
+  AGUARDANDO_GARANTIA: "bg-yellow-100 text-yellow-800",
+  EM_ANALISE_TECNICA: "bg-blue-100 text-blue-800",
+  AGUARDANDO_VALIDACAO_GESTOR: "bg-orange-100 text-orange-800",
+  AGUARDANDO_ORCAMENTO: "bg-purple-100 text-purple-800",
+  ORCAMENTO_GERADO: "bg-indigo-100 text-indigo-800",
+  AGUARDANDO_APROVACAO_CLIENTE: "bg-cyan-100 text-cyan-800",
+  APROVADO: "bg-green-100 text-green-800",
+  EM_EXECUCAO: "bg-teal-100 text-teal-800",
+  FINALIZADO: "bg-gray-200 text-gray-600",
+}
